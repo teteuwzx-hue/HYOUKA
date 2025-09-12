@@ -192,3 +192,6 @@ Players.PlayerRemoving:Connect(function(p)
         SelectedPlayer = nil
     end
 end)
+
+
+"Corrige o código do script Lua, arrumando o erro em que, ao selecionar o jogador na lista para spectar, os nomes ficam invisíveis, e a gente precisa clicar na lista invisível para escolher o jogador. Também corrige o erro do Freeze Player, que atualmente congela o jogador apenas para mim e não para todos. Quero que o Freeze Player funcione para que todos possam ver. Além disso, aumenta o tamanho do menu e deixa ele em um cinza transparente. Por fim, adiciona uma função para selecionar o jogador e, em seguida, usar o Kill Player para que o jogador seja morto."
