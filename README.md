@@ -1,197 +1,255 @@
 --[[
-  ROBLOX LUA SCRIPT - CLIENT SIDE
-  - Menu cinza móvel, com minimizar/fechar
-  - Freeze Player: selecionar player e congelar
-  - Spectate Player: acompanhar visão do player escolhido
-  - Não é visual avançado, é Ui padrão
+    HYOUKA Universal Script for Roblox
+    Features:
+        - Floating, draggable, minimizable, and closable panel
+        - Stylish large gray UI
+        - Aim FOV circle (toggleable)
+        - Aimbot (basic, customizable)
+        - "Spe Line": Draw lines to friends (green) and enemies (red)
+    Note: This script is universal, but features like friends/enemies may require adaptation for specific games.
 ]]
 
+-- Universal Services
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
 
---== Menu GUI Setup ==--
+-- UI Library (uses Instance)
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "GrayMenu"
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.Name = "HYOUKA"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game.CoreGui
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 220)
-MainFrame.Position = UDim2.new(0.1, 0, 0.1, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(60, 60, 60) -- cinza
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
+-- Main Panel
+local Panel = Instance.new("Frame")
+Panel.Size = UDim2.new(0, 480, 0, 320)
+Panel.Position = UDim2.new(0.5, -240, 0.5, -160)
+Panel.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+Panel.BorderSizePixel = 0
+Panel.AnchorPoint = Vector2.new(0.5, 0.5)
+Panel.Active = true
+Panel.Draggable = true
+Panel.Parent = ScreenGui
 
-local TitleBar = Instance.new("Frame")
-TitleBar.Size = UDim2.new(1, 0, 0, 40)
-TitleBar.BackgroundColor3 = Color3.fromRGB(80, 80, 80) -- cinza escuro
-TitleBar.BorderSizePixel = 0
-TitleBar.Parent = MainFrame
+-- Panel Title
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 38)
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.GothamBold
+Title.Text = "HYOUKA"
+Title.TextSize = 32
+Title.TextColor3 = Color3.fromRGB(200, 200, 200)
+Title.Parent = Panel
 
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Text = "Gray Menu"
-TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
-TitleLabel.Position = UDim2.new(0, 10, 0, 0)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.TextColor3 = Color3.new(1,1,1)
-TitleLabel.Font = Enum.Font.SourceSansBold
-TitleLabel.TextSize = 22
-TitleLabel.Parent = TitleBar
-
--- Minimize & Close Buttons
-local MinimizeBtn = Instance.new("TextButton")
-MinimizeBtn.Text = "_"
-MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
-MinimizeBtn.Position = UDim2.new(1, -70, 0, 5)
-MinimizeBtn.BackgroundColor3 = Color3.fromRGB(120,120,120)
-MinimizeBtn.TextColor3 = Color3.new(1,1,1)
-MinimizeBtn.Parent = TitleBar
-
+-- Close Button
 local CloseBtn = Instance.new("TextButton")
-CloseBtn.Text = "X"
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -35, 0, 5)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(180,80,80)
-CloseBtn.TextColor3 = Color3.new(1,1,1)
-CloseBtn.Parent = TitleBar
+CloseBtn.Size = UDim2.new(0, 38, 0, 38)
+CloseBtn.Position = UDim2.new(1, -38, 0, 0)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(90,90,90)
+CloseBtn.Text = "✕"
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 24
+CloseBtn.TextColor3 = Color3.fromRGB(220,60,60)
+CloseBtn.Parent = Panel
 
---== Menu Options ==--
-local PlayerDropdown = Instance.new("TextButton")
-PlayerDropdown.Text = "Selecionar Player"
-PlayerDropdown.Size = UDim2.new(1, -40, 0, 30)
-PlayerDropdown.Position = UDim2.new(0, 20, 0, 60)
-PlayerDropdown.BackgroundColor3 = Color3.fromRGB(100,100,100)
-PlayerDropdown.TextColor3 = Color3.new(1,1,1)
-PlayerDropdown.Parent = MainFrame
+-- Minimize Button
+local MiniBtn = Instance.new("TextButton")
+MiniBtn.Size = UDim2.new(0, 38, 0, 38)
+MiniBtn.Position = UDim2.new(1, -76, 0, 0)
+MiniBtn.BackgroundColor3 = Color3.fromRGB(90,90,90)
+MiniBtn.Text = "—"
+MiniBtn.Font = Enum.Font.GothamBold
+MiniBtn.TextSize = 24
+MiniBtn.TextColor3 = Color3.fromRGB(200,200,200)
+MiniBtn.Parent = Panel
 
-local SelectedPlayer = nil
+-- Main Content Holder
+local Content = Instance.new("Frame")
+Content.Size = UDim2.new(1, -24, 1, -48)
+Content.Position = UDim2.new(0, 12, 0, 44)
+Content.BackgroundTransparency = 1
+Content.Parent = Panel
 
-local FreezeBtn = Instance.new("TextButton")
-FreezeBtn.Text = "ACTIVATE FREEZE PLAYER"
-FreezeBtn.Size = UDim2.new(1, -40, 0, 30)
-FreezeBtn.Position = UDim2.new(0, 20, 0, 100)
-FreezeBtn.BackgroundColor3 = Color3.fromRGB(120,120,120)
-FreezeBtn.TextColor3 = Color3.new(1,1,1)
-FreezeBtn.Parent = MainFrame
+-- Options
+local opts = {
+    AimFov = true,
+    Aimbot = false,
+    FovRadius = 100,
+    SpeLine = true
+}
 
-local SpectateBtn = Instance.new("TextButton")
-SpectateBtn.Text = "SPECTATE PLAYER"
-SpectateBtn.Size = UDim2.new(1, -40, 0, 30)
-SpectateBtn.Position = UDim2.new(0, 20, 0, 140)
-SpectateBtn.BackgroundColor3 = Color3.fromRGB(80,120,180)
-SpectateBtn.TextColor3 = Color3.new(1,1,1)
-SpectateBtn.Parent = MainFrame
+-- Option toggles
+local function makeToggle(name, pos, default, callback)
+    local Toggle = Instance.new("TextButton")
+    Toggle.Size = UDim2.new(0, 220, 0, 38)
+    Toggle.Position = UDim2.new(0, 0, 0, pos)
+    Toggle.BackgroundColor3 = Color3.fromRGB(80,80,80)
+    Toggle.Font = Enum.Font.GothamSemibold
+    Toggle.TextSize = 22
+    Toggle.TextColor3 = Color3.fromRGB(220,220,220)
+    Toggle.Text = name .. ": " .. (default and "ON" or "OFF")
+    Toggle.Parent = Content
+    Toggle.MouseButton1Click:Connect(function()
+        default = not default
+        Toggle.Text = name .. ": " .. (default and "ON" or "OFF")
+        callback(default)
+    end)
+    return Toggle
+end
 
---== Minimize & Close ==--
-local minimized = false
-MinimizeBtn.MouseButton1Click:Connect(function()
-    if minimized then
-        MainFrame.Size = UDim2.new(0, 300, 0, 220)
-        for _, obj in pairs(MainFrame:GetChildren()) do
-            if obj ~= TitleBar then obj.Visible = true end
-        end
-        minimized = false
-    else
-        MainFrame.Size = UDim2.new(0, 300, 0, 40)
-        for _, obj in pairs(MainFrame:GetChildren()) do
-            if obj ~= TitleBar then obj.Visible = false end
-        end
-        minimized = true
-    end
+makeToggle("Aim FOV", 0, opts.AimFov, function(v) opts.AimFov = v end)
+makeToggle("Aimbot", 48, opts.Aimbot, function(v) opts.Aimbot = v end)
+makeToggle("Spe Line", 96, opts.SpeLine, function(v) opts.SpeLine = v end)
+
+-- FOV Slider
+local FovLabel = Instance.new("TextLabel")
+FovLabel.Size = UDim2.new(0, 220, 0, 32)
+FovLabel.Position = UDim2.new(0, 0, 0, 144)
+FovLabel.BackgroundTransparency = 1
+FovLabel.Font = Enum.Font.GothamSemibold
+FovLabel.TextSize = 18
+FovLabel.TextColor3 = Color3.fromRGB(200,200,200)
+FovLabel.Text = "FOV Radius: " .. opts.FovRadius
+FovLabel.Parent = Content
+
+local FovSlider = Instance.new("TextButton")
+FovSlider.Size = UDim2.new(0, 220, 0, 24)
+FovSlider.Position = UDim2.new(0, 0, 0, 180)
+FovSlider.BackgroundColor3 = Color3.fromRGB(90,90,90)
+FovSlider.Text = "Set FOV Radius (Click to +10)"
+FovSlider.Font = Enum.Font.Gotham
+FovSlider.TextSize = 16
+FovSlider.TextColor3 = Color3.fromRGB(180,180,180)
+FovSlider.Parent = Content
+FovSlider.MouseButton1Click:Connect(function()
+    opts.FovRadius = (opts.FovRadius + 10) % 300
+    if opts.FovRadius < 50 then opts.FovRadius = 50 end
+    FovLabel.Text = "FOV Radius: " .. opts.FovRadius
 end)
 
+-- Minimize / Close logic
+local minimized = false
+MiniBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    Content.Visible = not minimized
+    Panel.Size = minimized and UDim2.new(0, 480, 0, 38) or UDim2.new(0, 480, 0, 320)
+end)
 CloseBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
---== Player Dropdown Logic ==--
-local function updateDropdown()
-    local menu = Instance.new("Frame")
-    menu.Size = UDim2.new(0, 220, 0, #Players:GetPlayers()*30)
-    menu.Position = PlayerDropdown.Position + UDim2.new(0,0,0,30)
-    menu.BackgroundColor3 = Color3.fromRGB(70,70,70)
-    menu.Parent = MainFrame
-    menu.ZIndex = 10
-
-    for i, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer then
-            local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(1, 0, 0, 30)
-            btn.Position = UDim2.new(0, 0, 0, (i-1)*30)
-            btn.Text = p.Name
-            btn.BackgroundColor3 = Color3.fromRGB(100,100,100)
-            btn.TextColor3 = Color3.new(1,1,1)
-            btn.Parent = menu
-
-            btn.MouseButton1Click:Connect(function()
-                SelectedPlayer = p
-                PlayerDropdown.Text = "Selecionado: " .. p.Name
-                menu:Destroy()
-            end)
-        end
+-- Floating panel drag fix for new Roblox
+local dragging, dragInput, dragStart, startPos
+Panel.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = Panel.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
     end
+end)
+Panel.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        Panel.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
 
-    menu.MouseLeave:Connect(function()
-        menu:Destroy()
-    end)
+-- FOV Circle Drawing
+local FovCircle = Drawing and Drawing.new("Circle") or nil
+if FovCircle then
+    FovCircle.Transparency = 1
+    FovCircle.Color = Color3.fromRGB(120,120,120)
+    FovCircle.Thickness = 2
+    FovCircle.NumSides = 100
+    FovCircle.Filled = false
 end
 
-PlayerDropdown.MouseButton1Click:Connect(function()
-    updateDropdown()
-end)
-
---== Freeze Player Logic ==--
-FreezeBtn.MouseButton1Click:Connect(function()
-    if not SelectedPlayer then
-        FreezeBtn.Text = "Selecione um player!"
-        wait(1)
-        FreezeBtn.Text = "ACTIVATE FREEZE PLAYER"
-        return
-    end
-    -- Freeze: Anchora o HumanoidRootPart do player remoto (apenas local)
-    local char = SelectedPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.Anchored = true
-        FreezeBtn.Text = "Player Freezado!"
-        wait(1)
-        FreezeBtn.Text = "ACTIVATE FREEZE PLAYER"
+RunService.RenderStepped:Connect(function()
+    if FovCircle then
+        FovCircle.Visible = opts.AimFov and not minimized
+        FovCircle.Position = Camera.ViewportSize/2
+        FovCircle.Radius = opts.FovRadius
     end
 end)
 
---== Spectate Player Logic ==--
-local spectating = false
-SpectateBtn.MouseButton1Click:Connect(function()
-    if not SelectedPlayer then
-        SpectateBtn.Text = "Selecione um player!"
-        wait(1)
-        SpectateBtn.Text = "SPECTATE PLAYER"
-        return
+-- Basic Aimbot (Head aim, toggleable)
+local function getClosestTarget()
+    local maxDist = opts.FovRadius
+    local closest, closestPos
+    for i,player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+            local pos, onScreen = Camera:WorldToViewportPoint(player.Character.Head.Position)
+            local dist = (Vector2.new(pos.X, pos.Y) - Camera.ViewportSize/2).Magnitude
+            if onScreen and dist < maxDist then
+                maxDist = dist
+                closest = player
+                closestPos = pos
+            end
+        end
     end
-    local cam = workspace.CurrentCamera
-    if not spectating then
-        spectating = true
-        SpectateBtn.Text = "PARAR SPECTATE"
-        cam.CameraSubject = SelectedPlayer.Character and SelectedPlayer.Character:FindFirstChild("Humanoid")
-    else
-        spectating = false
-        SpectateBtn.Text = "SPECTATE PLAYER"
-        cam.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
-    end
-end)
+    return closest, closestPos
+end
 
---== Atualizar lista de players quando alguém entra/sai ==--
-Players.PlayerAdded:Connect(function()
-    PlayerDropdown.Text = "Selecionar Player"
-    SelectedPlayer = nil
-end)
-Players.PlayerRemoving:Connect(function(p)
-    if SelectedPlayer == p then
-        PlayerDropdown.Text = "Selecionar Player"
-        SelectedPlayer = nil
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if not gpe and opts.Aimbot and input.UserInputType == Enum.UserInputType.MouseButton2 then
+        local target = getClosestTarget()
+        if target and target.Character and target.Character:FindFirstChild("Head") then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.Head.Position)
+        end
     end
 end)
 
+-- Spe Line Drawing (uses Drawing API, may need adaptation for some exploits)
+local speLines = {}
 
-"Corrige o código do script Lua, arrumando o erro em que, ao selecionar o jogador na lista para spectar, os nomes ficam invisíveis, e a gente precisa clicar na lista invisível para escolher o jogador. Também corrige o erro do Freeze Player, que atualmente congela o jogador apenas para mim e não para todos. Quero que o Freeze Player funcione para que todos possam ver. Além disso, aumenta o tamanho do menu e deixa ele em um cinza transparente. Por fim, adiciona uma função para selecionar o jogador e, em seguida, usar o Kill Player para que o jogador seja morto."
+RunService.RenderStepped:Connect(function()
+    -- Remove old lines
+    for _,line in pairs(speLines) do
+        if line then line:Remove() end
+    end
+    speLines = {}
+
+    if opts.SpeLine and not minimized then
+        for _,player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+                local pos, onScreen = Camera:WorldToViewportPoint(player.Character.Head.Position)
+                if onScreen then
+                    local line = Drawing and Drawing.new("Line") or nil
+                    if line then
+                        line.From = Camera.ViewportSize/2
+                        line.To = Vector2.new(pos.X, pos.Y)
+                        line.Thickness = 2
+                        line.Transparency = 1
+                        if table.find(LocalPlayer:GetFriendsOnline(), player.UserId) then
+                            line.Color = Color3.fromRGB(60,220,80)
+                        else
+                            line.Color = Color3.fromRGB(220,60,60)
+                        end
+                        line.Visible = true
+                        table.insert(speLines, line)
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- Credits
+local Credits = Instance.new("TextLabel")
+Credits.Size = UDim2.new(0, 220, 0, 24)
+Credits.Position = UDim2.new(0, 0, 1, -24)
+Credits.BackgroundTransparency = 1
+Credits.Font = Enum.Font.Gotham
+Credits.TextSize = 16
+Credits.TextColor3 = Color3.fromRGB(120,120,120)
+Credits.Text = "Script by teteuwzx-hue | Universal | HYOUKA"
+Credits.Parent = Content
+
+-- End of Script
